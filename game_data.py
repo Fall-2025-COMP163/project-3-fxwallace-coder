@@ -14,151 +14,38 @@ from custom_exceptions import (
     CorruptedDataError
 )
 
-# =====================================================================
-# LOAD QUESTS
-# =====================================================================
+from custom_exceptions import ItemNotFoundError, InventoryFullError
 
-def load_quests(filename="data/quests.txt"):
-    if not os.path.exists(filename):
-        raise MissingDataFileError("Quest file not found.")
+MAX_INVENTORY_SIZE = 20
 
-    try:
-        with open(filename, "r") as f:
-            lines = f.read().splitlines()
-    except:
-        raise CorruptedDataError("Could not read quest file.")
+def add_item_to_inventory(character, item_id):
+    # inventory full
+    if len(character["inventory"]) >= MAX_INVENTORY_SIZE:
+        raise InventoryFullError("Inventory is full")
 
-    quests = {}
-    block = []
-
-    for line in lines + [""]:
-        if line.strip() == "":
-            if len(block) > 0:
-                quest = parse_quest_block(block)
-                validate_quest_data(quest)
-                quests[quest["quest_id"]] = quest
-                block = []
-        else:
-            block.append(line)
-
-    return quests
-
-# =====================================================================
-# LOAD ITEMS
-# =====================================================================
-
-def load_items(filename="data/items.txt"):
-    if not os.path.exists(filename):
-        raise MissingDataFileError("Item file not found.")
-
-    try:
-        with open(filename, "r") as f:
-            lines = f.read().splitlines()
-    except:
-        raise CorruptedDataError("Could not read item file.")
-
-    items = {}
-    block = []
-
-    for line in lines + [""]:
-        if line.strip() == "":
-            if len(block) > 0:
-                item = parse_item_block(block)
-                validate_item_data(item)
-                items[item["item_id"]] = item
-                block = []
-        else:
-            block.append(line)
-
-    return items
-
-# =====================================================================
-# VALIDATION
-# =====================================================================
-
-def validate_quest_data(q):
-    required = [
-        "quest_id", "title", "description",
-        "reward_xp", "reward_gold",
-        "required_level", "prerequisite"
-    ]
-
-    for r in required:
-        if r not in q:
-            raise InvalidDataFormatError("Missing quest field: " + r)
-
+    character["inventory"].append(item_id)
     return True
 
+def remove_item_from_inventory(character, item_id):
+    if item_id not in character["inventory"]:
+        raise ItemNotFoundError("Item not found")
 
-def validate_item_data(i):
-    required = ["item_id", "name", "type", "effect", "cost", "description"]
-
-    for r in required:
-        if r not in i:
-            raise InvalidDataFormatError("Missing item field: " + r)
-
-    if i["type"] not in ["weapon", "armor", "consumable"]:
-        raise InvalidDataFormatError("Invalid item type.")
-
+    character["inventory"].remove(item_id)
     return True
 
-# =====================================================================
-# PARSE QUEST
-# =====================================================================
+def has_item(character, item_id):
+    return item_id in character["inventory"]
 
-def parse_quest_block(lines):
-    quest = {}
+def count_item(character, item_id):
+    return character["inventory"].count(item_id)
 
-    for line in lines:
-        if ": " not in line:
-            raise InvalidDataFormatError("Bad quest line format.")
-        key, value = line.split(": ", 1)
+def get_inventory_space_remaining(character):
+    return MAX_INVENTORY_SIZE - len(character["inventory"])
 
-        if key == "QUEST_ID":
-            quest["quest_id"] = value
-        elif key == "TITLE":
-            quest["title"] = value
-        elif key == "DESCRIPTION":
-            quest["description"] = value
-        elif key == "REWARD_XP":
-            quest["reward_xp"] = int(value)
-        elif key == "REWARD_GOLD":
-            quest["reward_gold"] = int(value)
-        elif key == "REQUIRED_LEVEL":
-            quest["required_level"] = int(value)
-        elif key == "PREREQUISITE":
-            quest["prerequisite"] = value
-
-    return quest
-
-# =====================================================================
-# PARSE ITEM
-# =====================================================================
-
-def parse_item_block(lines):
-    item = {}
-
-    for line in lines:
-        if ": " not in line:
-            raise InvalidDataFormatError("Bad item line format.")
-        key, value = line.split(": ", 1)
-
-        if key == "ITEM_ID":
-            item["item_id"] = value
-        elif key == "NAME":
-            item["name"] = value
-        elif key == "TYPE":
-            item["type"] = value
-        elif key == "EFFECT":
-            # example: "strength:5"
-            stat, num = value.split(":")
-            item["effect"] = {stat: int(num)}
-        elif key == "COST":
-            item["cost"] = int(value)
-        elif key == "DESCRIPTION":
-            item["description"] = value
-
-    return item
+def clear_inventory(character):
+    removed = character["inventory"][:]
+    character["inventory"].clear()
+    return removed
 
 
 
