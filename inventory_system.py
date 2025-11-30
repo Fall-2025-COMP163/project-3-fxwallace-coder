@@ -57,6 +57,98 @@ def clear_inventory(character):
     return removed
 
 # ============================================================================
+# ITEM USAGE
+# ============================================================================
+
+def use_item(character, item_id, item_data):
+    if item_id not in character["inventory"]:
+        raise ItemNotFoundError("Item not found")
+    
+    item = item_data[item_id]
+    if item["type"] != "consumable":
+        raise InvalidItemTypeError("Item is not consumable")
+    
+    # Simple effect parsing: "stat:value"
+    stat, value = item["effect"].split(":")
+    value = int(value)
+    if stat == "health":
+        character["health"] += value
+        if character["health"] > character["max_health"]:
+            character["health"] = character["max_health"]
+    else:
+        character[stat] += value
+    
+    character["inventory"].remove(item_id)
+    return True
+
+def equip_weapon(character, item_id, item_data):
+    if item_id not in character["inventory"]:
+        raise ItemNotFoundError("Weapon not in inventory")
+    
+    item = item_data[item_id]
+    if item["type"] != "weapon":
+        raise InvalidItemTypeError("Item is not a weapon")
+    
+    # Unequip old weapon if any
+    if "equipped_weapon" in character:
+        old_weapon = character["equipped_weapon"]
+        character["inventory"].append(old_weapon)
+    
+    # Equip new weapon
+    stat, value = item["effect"].split(":")
+    value = int(value)
+    character[stat] += value
+    character["equipped_weapon"] = item_id
+    character["inventory"].remove(item_id)
+    return True
+
+def equip_armor(character, item_id, item_data):
+    if item_id not in character["inventory"]:
+        raise ItemNotFoundError("Armor not in inventory")
+    
+    item = item_data[item_id]
+    if item["type"] != "armor":
+        raise InvalidItemTypeError("Item is not armor")
+    
+    # Unequip old armor if any
+    if "equipped_armor" in character:
+        old_armor = character["equipped_armor"]
+        character["inventory"].append(old_armor)
+    
+    stat, value = item["effect"].split(":")
+    value = int(value)
+    character[stat] += value
+    character["equipped_armor"] = item_id
+    character["inventory"].remove(item_id)
+    return True
+
+# ============================================================================
+# SHOP SYSTEM
+# ============================================================================
+
+def purchase_item(character, item_id, item_data):
+    item = item_data[item_id]
+    cost = item["cost"]
+    if character["gold"] < cost:
+        raise InsufficientResourcesError("Not enough gold")
+    if len(character["inventory"]) >= MAX_INVENTORY_SIZE:
+        raise InventoryFullError("Inventory is full")
+    
+    character["gold"] -= cost
+    character["inventory"].append(item_id)
+    return True
+
+def sell_item(character, item_id, item_data):
+    if item_id not in character["inventory"]:
+        raise ItemNotFoundError("Item not in inventory")
+    
+    price = item_data[item_id]["cost"] // 2
+    character["inventory"].remove(item_id)
+    character["gold"] += price
+    return price
+
+
+# ============================================================================
 # TESTING
 # ============================================================================
 
