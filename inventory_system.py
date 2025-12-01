@@ -63,23 +63,22 @@ def clear_inventory(character):
 def use_item(character, item_id, item_data):
     if item_id not in character["inventory"]:
         raise ItemNotFoundError("Item not found")
-    
-    item = item_data[item_id]
-    if item["type"] != "consumable":
-        raise InvalidItemTypeError("Item is not consumable")
-    
-    # Simple effect parsing: "stat:value"
-    stat, value = item["effect"].split(":")
-    value = int(value)
-    if stat == "health":
-        character["health"] += value
-        if character["health"] > character["max_health"]:
-            character["health"] = character["max_health"]
-    else:
-        character[stat] += value
+
+    item = item_data  # Use directly
+
+    if item.get("type") != "consumable":
+        raise InvalidItemTypeError("This item cannot be used")
+
+    effect = item.get("effect", "")
+
+    if effect.startswith("heal:"):
+        amount = int(effect.split(":")[1])
+        character["health"] = min(character["health"] + amount,
+                                  character["max_health"])
     
     character["inventory"].remove(item_id)
     return True
+
 
 def equip_weapon(character, item_id, item_data):
     if item_id not in character["inventory"]:
@@ -127,16 +126,17 @@ def equip_armor(character, item_id, item_data):
 # ============================================================================
 
 def purchase_item(character, item_id, item_data):
-    item = item_data[item_id]
-    cost = item["cost"]
+    # item_data is already the item’s info
+    item = item_data  
+
+    cost = item.get("cost", 0)
     if character["gold"] < cost:
-        raise InsufficientResourcesError("Not enough gold")
-    if len(character["inventory"]) >= MAX_INVENTORY_SIZE:
-        raise InventoryFullError("Inventory is full")
+        raise InsufficientResourcesError("Not enough gold to purchase item.")
     
     character["gold"] -= cost
     character["inventory"].append(item_id)
     return True
+
 
 def sell_item(character, item_id, item_data):
     if item_id not in character["inventory"]:
