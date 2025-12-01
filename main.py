@@ -12,8 +12,7 @@ Demonstrates module integration and complete game flow.
 
 # Import all our custom modules
 # main.py
-# Full simple CLI for Quest Chronicles (freshman-level)
-# Uses only these imports (no extras as requested)
+
 import character_manager
 import inventory_system
 import quest_handler
