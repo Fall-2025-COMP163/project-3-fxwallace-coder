@@ -72,12 +72,21 @@ def save_character(character, save_directory="data/save_games"):
             f.write(f"MAGIC: {character['magic']}\n")
             f.write(f"EXPERIENCE: {character['experience']}\n")
             f.write(f"GOLD: {character['gold']}\n")
-            f.write(f"INVENTORY: {','.join(character['inventory'])}\n")
-            f.write(f"ACTIVE_QUESTS: {','.join(character['active_quests'])}\n")
-            f.write(f"COMPLETED_QUESTS: {','.join(character['completed_quests'])}\n")
+
+            # ALWAYS include a space after colon
+            inv = ",".join(character["inventory"])
+            active = ",".join(character["active_quests"])
+            completed = ",".join(character["completed_quests"])
+
+            f.write(f"INVENTORY: {inv}\n")
+            f.write(f"ACTIVE_QUESTS: {active}\n")
+            f.write(f"COMPLETED_QUESTS: {completed}\n")
+
         return True
+
     except Exception:
         raise SaveFileCorruptedError("Could not save character file")
+
 
 def load_character(character_name, save_directory="data/save_games"):
     filename = os.path.join(save_directory, f"{character_name}_save.txt")
