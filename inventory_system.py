@@ -61,91 +61,128 @@ def clear_inventory(character):
 # ============================================================================
 
 def use_item(character, item_id, item_data):
-    if item_id not in character["inventory"]:
+    if item_id not in character.get("inventory", []):
         raise ItemNotFoundError("Item not found")
 
-    item = item_data  # Use directly
+    # item_data is the data for the specific item
+    item = item_data
 
+    # only consumables can be used
     if item.get("type") != "consumable":
-        raise InvalidItemTypeError("This item cannot be used")
+        raise InvalidItemTypeError("Item is not consumable")
 
-    effect = item.get("effect", "")
+    # parse effect like "health:20" or "strength:3"
+    eff = item.get("effect", "")
+    if ":" in eff:
+        stat, val = eff.split(":", 1)
+        val = int(val)
+        if stat == "health":
+            character["health"] = min(character.get("max_health", 0), character.get("health", 0) + val)
+        elif stat == "max_health":
+            character["max_health"] = character.get("max_health", 0) + val
+        elif stat == "strength":
+            character["strength"] = character.get("strength", 0) + val
+        elif stat == "magic":
+            character["magic"] = character.get("magic", 0) + val
 
-    if effect.startswith("heal:"):
-        amount = int(effect.split(":")[1])
-        character["health"] = min(character["health"] + amount,
-                                  character["max_health"])
-    
+    # remove consumable from inventory
     character["inventory"].remove(item_id)
     return True
+
 
 
 def equip_weapon(character, item_id, item_data):
-    if item_id not in character["inventory"]:
+    inv = character.setdefault("inventory", [])
+    if item_id not in inv:
         raise ItemNotFoundError("Weapon not in inventory")
-    
-    item = item_data[item_id]
-    if item["type"] != "weapon":
+
+    item = item_data  # item_data is the item's info
+    if item.get("type") != "weapon":
         raise InvalidItemTypeError("Item is not a weapon")
-    
-    # Unequip old weapon if any
-    if "equipped_weapon" in character:
-        old_weapon = character["equipped_weapon"]
-        character["inventory"].append(old_weapon)
-    
-    # Equip new weapon
-    stat, value = item["effect"].split(":")
-    value = int(value)
-    character[stat] += value
+
+    # Unequip old weapon if present
+    old = character.get("equipped_weapon")
+    if old:
+        inv.append(old)
+        # NOTE: if you gave stat bonus for old, you'd remove it here
+
+    # Apply weapon effect e.g., "strength:5"
+    eff = item.get("effect", "")
+    if ":" in eff:
+        stat, val = eff.split(":", 1)
+        val = int(val)
+        if stat == "strength":
+            character["strength"] = character.get("strength", 0) + val
+        elif stat == "magic":
+            character["magic"] = character.get("magic", 0) + val
+
     character["equipped_weapon"] = item_id
-    character["inventory"].remove(item_id)
+    inv.remove(item_id)
     return True
 
+
 def equip_armor(character, item_id, item_data):
-    if item_id not in character["inventory"]:
+    inv = character.setdefault("inventory", [])
+    if item_id not in inv:
         raise ItemNotFoundError("Armor not in inventory")
-    
-    item = item_data[item_id]
-    if item["type"] != "armor":
+
+    item = item_data
+    if item.get("type") != "armor":
         raise InvalidItemTypeError("Item is not armor")
-    
-    # Unequip old armor if any
-    if "equipped_armor" in character:
-        old_armor = character["equipped_armor"]
-        character["inventory"].append(old_armor)
-    
-    stat, value = item["effect"].split(":")
-    value = int(value)
-    character[stat] += value
+
+    old = character.get("equipped_armor")
+    if old:
+        inv.append(old)
+        # remove old bonuses here if your system tracked them
+
+    eff = item.get("effect", "")
+    if ":" in eff:
+        stat, val = eff.split(":", 1)
+        val = int(val)
+        if stat == "max_health":
+            character["max_health"] = character.get("max_health", 0) + val
+            # ensure current health not above new max (or you can leave it)
+            character["health"] = min(character.get("health", 0), character["max_health"])
+        elif stat == "magic":
+            character["magic"] = character.get("magic", 0) + val
+
     character["equipped_armor"] = item_id
-    character["inventory"].remove(item_id)
+    inv.remove(item_id)
     return True
+
 
 # ============================================================================
 # SHOP SYSTEM
 # ============================================================================
 
 def purchase_item(character, item_id, item_data):
-    # item_data is already the item’s info
-    item = item_data  
+    # item_data here is the item's info dict (not a dict-of-items)
+    item = item_data
+    cost = int(item.get("cost", 0))
 
-    cost = item.get("cost", 0)
-    if character["gold"] < cost:
-        raise InsufficientResourcesError("Not enough gold to purchase item.")
-    
-    character["gold"] -= cost
-    character["inventory"].append(item_id)
+    if character.get("gold", 0) < cost:
+        raise InsufficientResourcesError("Not enough gold")
+
+    if len(character.get("inventory", [])) >= MAX_INVENTORY_SIZE:
+        raise InventoryFullError("Inventory is full")
+
+    character["gold"] = character.get("gold", 0) - cost
+    character.setdefault("inventory", []).append(item_id)
     return True
 
 
 def sell_item(character, item_id, item_data):
-    if item_id not in character["inventory"]:
+    inv = character.setdefault("inventory", [])
+    if item_id not in inv:
         raise ItemNotFoundError("Item not in inventory")
-    
-    price = item_data[item_id]["cost"] // 2
-    character["inventory"].remove(item_id)
-    character["gold"] += price
+
+    item = item_data
+    price = int(item.get("cost", 0)) // 2
+
+    inv.remove(item_id)
+    character["gold"] = character.get("gold", 0) + price
     return price
+
 
 
 # ============================================================================
