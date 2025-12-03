@@ -97,10 +97,17 @@ def load_character(character_name, save_directory="data/save_games"):
 
     try:
         for line in lines:
+            line = line.strip()
             if ": " not in line:
-                raise InvalidSaveDataError("Invalid file format")
+    # allow empty lists like "INVENTORY:" to be treated as empty
+                if line.endswith(":"):
+                    key = line[:-1]
+                    value = ""
+                else:
+                    raise InvalidSaveDataError("Invalid file format")
+            else:
+                key, value = line.split(": ", 1)
 
-            key, value = line.strip().split(": ", 1)
 
             if key in ["LEVEL", "HEALTH", "MAX_HEALTH", "STRENGTH", "MAGIC",
                        "EXPERIENCE", "GOLD"]:
