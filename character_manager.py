@@ -72,8 +72,6 @@ def save_character(character, save_directory="data/save_games"):
             f.write(f"MAGIC: {character['magic']}\n")
             f.write(f"EXPERIENCE: {character['experience']}\n")
             f.write(f"GOLD: {character['gold']}\n")
-
-            # MUST include a SPACE after ": " even when empty
             f.write(f"INVENTORY: {','.join(character['inventory'])}\n")
             f.write(f"ACTIVE_QUESTS: {','.join(character['active_quests'])}\n")
             f.write(f"COMPLETED_QUESTS: {','.join(character['completed_quests'])}\n")
